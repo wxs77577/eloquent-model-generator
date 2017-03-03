@@ -68,11 +68,15 @@ class FieldProcessor implements ProcessorInterface
             ->setDocBlock(new DocBlockModel('@var array'));
         $model->addProperty($fillableProperty);
 
-        $castsProperty = new PropertyModel('casts');
-        $castsProperty->setAccess('protected')
-            ->setValue([])
-            ->setDocBlock(new DocBlockModel('@var array'));
+        $castsProperty = new PropertyModel('casts', 'protected', []);
+        $castsProperty->setDocBlock(new DocBlockModel('@var array'));
         $model->addProperty($castsProperty);
+
+        if ($model->getName()->getName() == 'User') {
+            $property = new PropertyModel('hidden', 'protected', ['password']);
+            $property->setDocBlock(new DocBlockModel("The attributes excluded from the model's JSON form. ", '@var array'));
+            $model->addProperty($property);
+        }
         return $this;
     }
 
@@ -83,4 +87,5 @@ class FieldProcessor implements ProcessorInterface
     {
         return 5;
     }
+
 }

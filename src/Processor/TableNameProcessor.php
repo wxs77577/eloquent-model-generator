@@ -38,8 +38,11 @@ class TableNameProcessor implements ProcessorInterface
         $className     = $config->get('class_name');
         $baseClassName = $config->get('base_class_name');
         $tableName     = $config->get('table_name');
-
-        $model->setName(new ClassNameModel($className, $this->helper->getShortClassName($baseClassName)));
+        $extends       = $this->helper->getShortClassName($baseClassName);
+        if ($className == 'User') {
+            $extends = '\\Illuminate\\Foundation\\Auth\\User';
+        }
+        $model->setName(new ClassNameModel($className, $extends));
         $model->addUses(new UseClassModel(ltrim($baseClassName, '\\')));
         $model->setTableName($tableName ?: $this->helper->getDefaultTableName($className));
 
