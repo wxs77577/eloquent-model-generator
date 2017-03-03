@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo as EloquentBelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany as EloquentBelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany as EloquentHasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne as EloquentHasOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 use Krlove\CodeGenerator\Model\DocBlockModel;
 use Krlove\CodeGenerator\Model\MethodModel;
@@ -39,6 +40,11 @@ class RelationProcessor implements ProcessorInterface
     protected $helper;
 
     /**
+     * @var Config
+     */
+    protected $config;
+
+    /**
      * FieldProcessor constructor.
      * @param DatabaseManager $databaseManager
      * @param EmgHelper $helper
@@ -54,6 +60,17 @@ class RelationProcessor implements ProcessorInterface
      */
     public function process(EloquentModel $model, Config $config)
     {
+        $this->config = $config;
+        $className = $model->getName()->getName();
+        if (in_array($className, $config->get('morphs', []))) {
+            $methodName = camel_case($className).'able';
+            $method = new MethodModel($methodName);
+            $method->setBody('return $this->morphTo();');
+            $method->setDocBlock(new DocBlockModel('Get related models', '@return \\'. MorphTo::class));
+
+            $model->addMethod($method);
+            $model->addProperty(new VirtualPropertyModel($methodName, 'Model'));
+        }
         $schemaManager = $this->databaseManager->connection()->getDoctrineSchemaManager();
         $prefix        = $this->databaseManager->connection()->getTablePrefix();
 
@@ -222,14 +239,23 @@ class RelationProcessor implements ProcessorInterface
                 $this->helper->getDefaultForeignColumnName($relation->getTableName())
             );
         } elseif ($relation instanceof HasMany) {
-            $arguments[] = $this->resolveArgument(
-                $relation->getForeignColumnName(),
-                $this->helper->getDefaultForeignColumnName($model->getTableName())
-            );
-            $arguments[] = $this->resolveArgument(
-                $relation->getLocalColumnName(),
-                EmgHelper::DEFAULT_PRIMARY_KEY
-            );
+            $singular = str_singular($relation->getTableName());
+            $className = studly_case($singular);
+            //if it's morphMany relation
+            if (in_array($className, $this->config->get('morphs', []))) {
+                $name = 'morphMany';
+                $arguments[] = $this->resolveArgument($singular.'able', null);
+            } else {
+                $arguments[] = $this->resolveArgument(
+                    $relation->getForeignColumnName(),
+                    $this->helper->getDefaultForeignColumnName($model->getTableName())
+                );
+                $arguments[] = $this->resolveArgument(
+                    $relation->getLocalColumnName(),
+                    EmgHelper::DEFAULT_PRIMARY_KEY
+                );
+            }
+
         } else {
             $arguments[] = $this->resolveArgument(
                 $relation->getForeignColumnName(),
