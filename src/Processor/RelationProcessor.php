@@ -102,7 +102,6 @@ class RelationProcessor implements ProcessorInterface
                     if (count($localColumns) !== 1) {
                         continue;
                     }
-                    echo $ta
 
                     if (count($foreignKeys) === 2 && count($table->getColumns()) === 2) {
                         $keys               = array_keys($foreignKeys);
